@@ -1,10 +1,44 @@
 let bangs = [];
+let bangs_lookup = {};
 
 // Get current list of Bangs from DuckDuckGo
-(async () => {
+const ALARM_NAME = "Bangs-For-Google_Bang-Refresh-Timer"
+browser.alarms.onAlarm.addListener(async () => {
   const res = await fetch("https://duckduckgo.com/bang.js");
   bangs = await res.json();
-})();
+  bangs_lookup = {}
+  for (let bang of bangs) {
+    bangs_lookup[bang.t] = bang
+  }
+});
+browser.alarms.create(ALARM_NAME, {
+  when: Date.now(),
+  periodInMinutes: 30,
+})
+
+function getURL(query) {
+  let url = `https://www.duckduckgo.com/?q=${encodeURIComponent(query)}`
+  if (!query.startsWith("!")) {
+    return url
+  }
+
+  let bang = query.substring(1)
+  let search = ""
+  if (query.includes(" ")) {
+    bang = query.substring(1, query.indexOf(" "))
+    search = query.substring(query.indexOf(" ") + 1)
+  }
+
+  if (bang in bangs_lookup) {
+    if (search == "") {
+      url = `https://${bangs_lookup[bang].d}`
+    } else {
+      url = bangs_lookup[bang].u.replace("{{{s}}}", encodeURIComponent(search))
+    }
+  }
+
+  return url
+}
 
 chrome.webRequest.onBeforeRequest.addListener(({ url }) => {
   // Get search query from URL
@@ -15,7 +49,7 @@ chrome.webRequest.onBeforeRequest.addListener(({ url }) => {
   if (query && query.startsWith('!')) {
     // Redirect to DuckDuckGo
     return {
-      redirectUrl: `https://www.duckduckgo.com/?q=${encodeURIComponent(query)}`,
+      redirectUrl: getURL(query),
     };
   }
 }, {
@@ -30,7 +64,7 @@ chrome.webRequest.onBeforeRequest.addListener(({ url }) => {
 chrome.omnibox.onInputChanged.addListener((text, addSuggestions) => {
   let filterText = text.trim();
   if (filterText.indexOf("!") === 0) {
-      filterText = filterText.substr(1)
+    filterText = filterText.substr(1)
   }
 
   chrome.omnibox.setDefaultSuggestion({
@@ -47,7 +81,7 @@ chrome.omnibox.onInputChanged.addListener((text, addSuggestions) => {
     ) {
       // Shorter Bang => More relevant
       let lengthRelevance = (10 - bang.t.length);
-      if (lengthRelevance > 0){
+      if (lengthRelevance > 0) {
         lengthRelevance = 0;
       }
 
@@ -89,20 +123,20 @@ chrome.omnibox.onInputChanged.addListener((text, addSuggestions) => {
 chrome.omnibox.onInputEntered.addListener((text, disposition) => {
   let bang = text.trim();
   if (bang.indexOf("!") === 0) {
-      bang = bang.substr(1)
+    bang = bang.substr(1)
   }
 
-  const url = `https://www.duckduckgo.com/?q=${encodeURIComponent(`!${bang}`)}`;
+  const url = getURL(`!${bang}`)
 
   switch (disposition) {
     case "currentTab":
-      chrome.tabs.update({url});
+      chrome.tabs.update({ url });
       break;
     case "newForegroundTab":
-      chrome.tabs.create({url});
+      chrome.tabs.create({ url });
       break;
     case "newBackgroundTab":
-      chrome.tabs.create({url, active: false});
+      chrome.tabs.create({ url, active: false });
       break;
   }
 });
