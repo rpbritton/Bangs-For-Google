@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "name": "Bangs for Google",
+  "name": "Bangs for Google (With Cache)",
   "version": "1.1",
   "icons": {
     "32": "icons/icon-32.png",
@@ -8,7 +8,7 @@
     "128": "icons/icon-128.png"
   },
   "description": "Use DuckDuckGo Bangs in the Google Search",
-  "homepage_url": "https://github.com/vantezzen/bangs-for-google",
+  "homepage_url": "https://github.com/rpbritton/bangs-for-google-with-cache",
   "permissions": [
     "alarms",
     "webRequest",
